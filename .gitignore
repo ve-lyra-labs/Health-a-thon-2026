@@ -1,0 +1,52 @@
+# --- Secrets (NEVER UPLOAD) ---
+.env
+*.env
+*.json
+credentials.json
+gcp-credentials.json
+chatbot.json
+service_account.json
+
+# --- Dependencies (Too Heavy) ---
+node_modules/
+venv/
+__pycache__/
+.next/
+dist/
+build/
+.turbo/
+.DS_Store
+*.pyc
+
+# secrets
+*.json
+!package.json
+!turbo.json
+!tsconfig.json
+!backend/diagtool/app/prompts/*.json
+!backend/research_assistant/eval/cases.json
+package-lock.json
+
+.env*
+!.env.example
+env.txt
+
+# pnpm
+.pnpm-store/
+
+# --- Database & Build Artifacts ---
+*.db
+tsconfig.tsbuildinfo
+
+test_requirements
+
+ve-lyra-monorepo-template
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.backup
+terraform.tfvars
+*.auto.tfvars
+# Local database backups — contain real patient data (PHI). Never commit.
+backend/backups/

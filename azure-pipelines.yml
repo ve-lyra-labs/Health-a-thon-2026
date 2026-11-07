@@ -1,0 +1,95 @@
+# Only a push to main deploys by itself. Every other branch deploys when you queue a run
+# on it by hand -- there are no branch conditions, so whichever branch you queue is what
+# goes live, and the last run wins. Tests and typecheck are not run here: run them
+# locally before pushing, because nothing between a push and the live apps will.
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  ACR_LOGIN_SERVER: lyrahacr.azurecr.io
+  RESOURCE_GROUP: lyra-healthcare-rg
+  BACKEND_APP: ca-lyra-backend
+  FRONTEND_APP: ca-lyra-frontend
+  BACKEND_URL: https://ca-lyra-backend.mangodesert-2507e228.centralindia.azurecontainerapps.io
+
+stages:
+
+- stage: Build
+  displayName: Build and Push Images
+  dependsOn: []
+  jobs:
+
+  - job: Backend
+    displayName: Backend
+    steps:
+    - task: AzureCLI@2
+      displayName: Build and push backend image
+      inputs:
+        azureSubscription: lyra-azure-sc
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az acr login --name lyrahacr
+          docker build --platform linux/amd64 \
+            -t $(ACR_LOGIN_SERVER)/lyra-backend:latest \
+            -t $(ACR_LOGIN_SERVER)/lyra-backend:$(Build.BuildId) \
+            ./backend
+          docker push $(ACR_LOGIN_SERVER)/lyra-backend:latest
+          docker push $(ACR_LOGIN_SERVER)/lyra-backend:$(Build.BuildId)
+
+  - job: Frontend
+    displayName: Frontend
+    steps:
+    - task: AzureCLI@2
+      displayName: Build and push frontend image
+      inputs:
+        azureSubscription: lyra-azure-sc
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az acr login --name lyrahacr
+          docker build --platform linux/amd64 \
+            -f frontend/Dockerfile \
+            --build-arg NEXT_PUBLIC_PYTHON_API_URL=$(BACKEND_URL)/api/v1 \
+            -t $(ACR_LOGIN_SERVER)/lyra-frontend:latest \
+            -t $(ACR_LOGIN_SERVER)/lyra-frontend:$(Build.BuildId) \
+            .
+          docker push $(ACR_LOGIN_SERVER)/lyra-frontend:latest
+          docker push $(ACR_LOGIN_SERVER)/lyra-frontend:$(Build.BuildId)
+
+- stage: Deploy
+  displayName: Deploy to Azure Container Apps
+  dependsOn: Build
+  jobs:
+
+  - job: Deploy
+    displayName: Update Container Apps
+    steps:
+    - task: AzureCLI@2
+      displayName: Deploy backend
+      inputs:
+        azureSubscription: lyra-azure-sc
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az containerapp update \
+            --name $(BACKEND_APP) \
+            --resource-group $(RESOURCE_GROUP) \
+            --image $(ACR_LOGIN_SERVER)/lyra-backend:$(Build.BuildId)
+
+    - task: AzureCLI@2
+      displayName: Deploy frontend
+      inputs:
+        azureSubscription: lyra-azure-sc
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az containerapp update \
+            --name $(FRONTEND_APP) \
+            --resource-group $(RESOURCE_GROUP) \
+            --image $(ACR_LOGIN_SERVER)/lyra-frontend:$(Build.BuildId)

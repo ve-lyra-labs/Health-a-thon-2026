@@ -1,0 +1,27 @@
+# Backend (not needed for frontend build)
+backend/
+
+# Frontend build artifacts
+frontend/.next/
+frontend/node_modules/
+frontend/.DS_Store
+
+# Root artifacts
+node_modules/
+.DS_Store
+*.md
+docs/
+.git/
+.gitignore
+
+# Secrets
+.env
+*.env
+env.txt
+*.json
+!package.json
+!pnpm-workspace.yaml
+!turbo.json
+!frontend/package.json
+!frontend/tsconfig.json
+!frontend/components.json
